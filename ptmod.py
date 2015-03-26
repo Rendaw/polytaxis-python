@@ -46,7 +46,7 @@ def main():
         dest='list', 
         action='store_true',
     )
-    parser.set_defaults(list=False, strip=False)
+    parser.set_defaults(list=False, strip=False, add=[], remove=[])
     args = parser.parse_args()
 
     if args.strip and (args.add or args.remove or args.clear or args.list):
