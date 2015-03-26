@@ -16,17 +16,20 @@ def _encode_part(text):
         u'\\': u'\\\\'
     }.get(char, char) for char in text)
 
+def encode_tag(key, value):
+    if value is None:
+        return _encode_part(key)
+    else:
+        return u'{}={}'.format(
+            _encode_part(key),
+            _encode_part(value),
+        )
+
 def encode_tags(tags):
     assembled = []
     for key, vals in tags.items():
         for val in vals:
-            if val is None:
-                assembled.append(_encode_part(key))
-            else:
-                assembled.append(u'{}={}'.format(
-                    _encode_part(key),
-                    _encode_part(val),
-                ))
+            assembled.append(encode_tag(key, val))
     assembled.append('')
     return sep2.join(assembled)
 
