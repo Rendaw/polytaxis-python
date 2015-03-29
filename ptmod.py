@@ -48,6 +48,8 @@ def main():
     )
     parser.set_defaults(list=False, strip=False, add=[], remove=[])
     args = parser.parse_args()
+    if not args.add and not args.remove and not args.clear and not args.strip:
+        args.list = True
 
     if args.strip and (args.add or args.remove or args.clear or args.list):
         parser.error(
@@ -80,9 +82,9 @@ def main():
         if modify:
             polytaxis.set_tags(filename, tags)
         if args.list:
-            print('Final tags for {}:\n{}\n'.format(
+            print(u'Tags in {}:\n{}'.format(
                 filename,
-                tags,
+                polytaxis.encode_tags(tags).decode('utf-8'),
             ))
 
 if __name__ == '__main__':

@@ -10,17 +10,19 @@ sep2 = '\n'
 unsized_mark = '<<<<\n'
 
 def _encode_part(text):
-    return ''.join({
-        u'=': u'\\=', 
-        u'\n': u'\\\n', 
-        u'\\': u'\\\\'
-    }.get(char, char) for char in text)
+    return u''.join({
+        '=': '\\=', 
+        '\n': '\\\n', 
+        '\\': '\\\\',
+    }.get(char, char) for char in text).encode('utf-8')
 
 def encode_tag(key, value):
+    key = unicode(key)
+    value = unicode(value) if value is not None else None
     if value is None:
         return _encode_part(key)
     else:
-        return u'{}={}'.format(
+        return '{}={}'.format(
             _encode_part(key),
             _encode_part(value),
         )
@@ -44,13 +46,15 @@ def decode_tags(raw_tags, decode_one=False):
     s = State()
 
     def finish():
-        key = ''.join(s.out_key)
+        key = ''.join(s.out_key).decode('utf-8')
         values = tags.get(key)
         if values is None:
             values = set()
             tags[key] = values
         values.add(
-            ''.join(s.out_val) if s.out_val is not None else None
+            ''.join(s.out_val).decode('utf-8') 
+            if s.out_val is not None 
+            else None
         )
 
     def append(char):
@@ -91,13 +95,13 @@ def _read_magic(file):
         return False
     return True
 
-def _read_size(file, filename):
+def _read_size(file):
     pre_size = file.read(size_size)
     if len(pre_size) != size_size:
         raise ValueError(
             u'file [{}] ends before header length could be read'
             .format(
-                filename
+                file.name
             )
         )
         return None
@@ -105,7 +109,7 @@ def _read_size(file, filename):
         raise ValueError(
             u'file [{}] missing post-size newline'
             .format(
-                filename
+                file.name
             )
         )
     try:
@@ -114,7 +118,7 @@ def _read_size(file, filename):
         raise ValueError(
             u'error reading polytaxis header length in file [{}]: {}'
             .format(
-                filename,
+                file.name,
                 e,
             )
         )
@@ -152,7 +156,7 @@ def write_tags(file, tags=None, raw_tags=None, unsized=False, minimize=False):
     else:
         file.write(('{:0' + '{}d'.format(size_size) + '}').format(new_length))
     file.write(sep2)
-    file.write(raw_tags)
+    file.write(raw_tags.encode('utf-8'))
     if unsized:
         file.write(unsized_mark)
     else:
@@ -165,7 +169,7 @@ def get_tags(filename):
     with open(filename, 'rb') as file:
         if not _read_magic(file):
             return None
-        size = _read_size(file, filename)
+        size = _read_size(file)
         if size == -1:
             raw_tags = _find_unsized_mark(file)
         else:
@@ -177,7 +181,7 @@ def get_tags(filename):
                     .format(
                         filename,
                         size,
-                        len(raw_Tags),
+                        len(raw_tags),
                     )
                 )
         tags = decode_tags(raw_tags)
@@ -225,7 +229,7 @@ def strip_tags(filename):
                 )
             )
     with open(filename, 'rb') as file:
-        if not seek_past_tags(file, filename):
+        if not seek_past_tags(file):
             raise RuntimeError(
                 'Could not find end of polytaxis data. File may be corrupt.'
             )
@@ -262,7 +266,7 @@ def set_tags(filename, tags, unsized=None, minimize=False):
             )
             os.remove(filename)
             return
-        size = _read_size(file, filename)
+        size = _read_size(file)
         if size == -1:
             if not _find_unsized_mark(file):
                 raise ValueError(
@@ -307,13 +311,13 @@ def seek_tags(file):
     """Seek a file to the start of the tag header."""
     target.seek(0)
 
-def seek_past_tags(file, filename='unknown'):
+def seek_past_tags(file):
     """Seek a file past the end of the tag header (start of non-tag data)."""
     file.seek(0)
     if not _read_magic(file):
         file.seek(0)
         return False
-    size = _read_size(file, filename)
+    size = _read_size(file)
     if size == -1:
         if not _find_unsized_mark(file):
             return False
@@ -324,3 +328,61 @@ def seek_past_tags(file, filename='unknown'):
             return False
     return True
 
+class UnwrappedFile(object):
+    def __init__(self, filename, mode):
+        if mode in ['a', 'ab']:
+            self.f = open(filename, mode)
+            return
+        if mode == 'w':
+            mode = 'r+'
+        elif mode == 'wb':
+            mode = 'rb+'
+        elif mode in ('r', 'rb'):
+            pass
+        else:
+            raise ValueError('Unsupported mode {}'.format(mode))
+        self.f = open(filename, mode)
+        seek_past_tags(self.f)
+        self.offset = self.f.tell()
+    
+    def __getattr__(self, name):
+        return getattr(self.f, name)
+
+    def fileno(self):
+        raise NotImplementedError(
+            'For safety reasons file descriptor access is disabled.',
+        )
+
+    def seek(self, offset, whence=os.SEEK_SET):
+        if whence == os.SEEK_SET:
+            if offset < 0:
+                offset = 0
+            self.f.seek(offset + self.offset, whence)
+        elif whence == os.SEEK_CUR:
+            self.f.seek(
+                max(0, self.f.tell() - self.offset + offset) + self.offset,
+                whence,
+            )
+        elif whence == os.SEEK_END:
+            raise NotImplementedError(
+                'Unwrapped files can\'t seek from end currently.'
+            )
+
+    def tell(self):
+        return self.f.tell() - self.offset
+
+    def truncate(self, size=0):
+        self.f.truncate(max(0, size + self.offset))
+
+class open_unwrap:
+    def __init__(self, filename, mode):
+        self.f = UnwrappedFile(filename, mode)
+   
+    def __getattr__(self, name):
+        return getattr(self.f, name)
+
+    def __enter__(self):
+        return self.f
+
+    def __exit__(self, type, value, traceback):
+        self.f.close()
