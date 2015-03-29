@@ -2,8 +2,8 @@ import tempfile
 import shutil
 import os
 
-magic = 'polytaxis00 '
-size_size = 11
+magic = 'polytaxis00'
+size_size = 10
 size_limit = 10 ** size_size
 sep = '='
 sep2 = '\n'
@@ -85,8 +85,8 @@ def decode_tags(raw_tags, decode_one=False):
 
     return tags
 
-def _header_end(size):
-    return len(magic) + size_size + 1 + size
+def _sized_header_end(size):
+    return len(magic) + 1 + size_size + 1 + size
 
 def _read_magic(file):
     read = file.read(len(magic))
@@ -96,15 +96,35 @@ def _read_magic(file):
     return True
 
 def _read_size(file):
-    pre_size = file.read(size_size)
-    if len(pre_size) != size_size:
+    size_type = file.read(1)
+    if len(size_type) != 1:
         raise ValueError(
-            u'file [{}] ends before header length could be read'
-            .format(
-                file.name
+            u'Missing size differentiator in file [{}]'.format(
+                file.name,
             )
         )
-        return None
+    if size_type == 'u':
+        size = -1
+    else:
+        pre_size = file.read(size_size)
+        if len(pre_size) != size_size:
+            raise ValueError(
+                u'file [{}] ends before header length could be read'
+                .format(
+                    file.name
+                )
+            )
+            return None
+        try:
+            size = int(pre_size)
+        except ValueError as e:
+            raise ValueError(
+                u'error reading polytaxis header length in file [{}]: {}'
+                .format(
+                    file.name,
+                    e,
+                )
+            )
     if file.read(1) != sep2:
         raise ValueError(
             u'file [{}] missing post-size newline'
@@ -112,16 +132,7 @@ def _read_size(file):
                 file.name
             )
         )
-    try:
-        return int(pre_size)
-    except ValueError as e:
-        raise ValueError(
-            u'error reading polytaxis header length in file [{}]: {}'
-            .format(
-                file.name,
-                e,
-            )
-        )
+    return size
 
 def _find_unsized_mark(file):
     aggregate = []
@@ -144,22 +155,23 @@ def _find_unsized_mark(file):
 def write_tags(file, tags=None, raw_tags=None, unsized=False, minimize=False):
     if tags is None and raw_tags is None:
         raise TypeError('write_tags requires either \'tags\' or \'raw_tags\'.')
+    file.write(magic)
     if tags is not None:
         raw_tags = encode_tags(tags)
-    new_length = (
-        len(raw_tags) if minimize else _shift_bit_length(len(raw_tags))
-    )
-    new_end = _header_end(new_length)
-    file.write(magic)
     if unsized:
-        file.write(('{:0' + '{}d'.format(size_size) + '}').format(-1))
-    else:
-        file.write(('{:0' + '{}d'.format(size_size) + '}').format(new_length))
-    file.write(sep2)
-    file.write(raw_tags.encode('utf-8'))
-    if unsized:
+        file.write('u')
+        file.write(sep2)
+        file.write(raw_tags)
         file.write(unsized_mark)
     else:
+        file.write(' ')
+        new_length = (
+            len(raw_tags) if minimize else _shift_bit_length(len(raw_tags))
+        )
+        new_end = _sized_header_end(new_length)
+        file.write(('{:0' + '{}d'.format(size_size) + '}').format(new_length))
+        file.write(sep2)
+        file.write(raw_tags)
         if file.tell() < new_end:
             file.write('\0')
         file.seek(new_end)
@@ -282,7 +294,7 @@ def set_tags(filename, tags, unsized=None, minimize=False):
                 minimize=minimize,
             )
         else:
-            end = _header_end(size)
+            end = _sized_header_end(size)
             if size < len(raw_tags):
                 file.seek(end)
                 _insert_tags(
@@ -322,7 +334,7 @@ def seek_past_tags(file):
         if not _find_unsized_mark(file):
             return False
     else:
-        total = _header_end(size)
+        total = _sized_header_end(size)
         file.seek(total, 0)
         if file.tell() != total:
             return False
