@@ -98,7 +98,11 @@ def main():
             polytaxis.strip_tags(filename)
             continue
 
-        tags = polytaxis.get_tags(filename) or {}
+        tags = polytaxis.get_tags(filename)
+        existing = tags is not None
+        if tags is None:
+            tags = {}
+
         modify = False
         if args.empty:
             tags = {}
@@ -119,6 +123,10 @@ def main():
         if modify:
             polytaxis.set_tags(filename, tags, unsized=unsized)
         if args.list:
+            if not existing and not modify:
+                raise RuntimeError(
+                    'Cannot list existing tags; [{}] has no polytaxis header.'
+                )
             print('Tags in {}:\n{}'.format(
                 filename,
                 polytaxis.encode_tags(tags).decode('utf-8'),

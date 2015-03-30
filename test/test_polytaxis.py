@@ -343,3 +343,8 @@ class TestPolytaxisFilesInternal(unittest.TestCase):
             open2r(res('seed.txt.p')),
             raw_sized_normal,
         )
+
+class TestRealLife(unittest.TestCase):
+    def test_broken1(self):
+        with open(res('broken1.txt.p'), 'rb') as file:
+            polytaxis.seek_past_tags(file)
