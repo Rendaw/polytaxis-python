@@ -20,15 +20,29 @@ Note: All tags are specified in the format `{tagname: set([value or None])}`.  T
 Example: `author=rendaw` would be specified by `{'author': set(['rendaw'])}`.  
 Example 2: `top_secret` would be specified by `{'top_secret': set([None])}`.
 
+##### def encode_tag(key, value):
+
+Encodes an individual tag.  `value` may be None.
+
+##### def encode_tags(tags):
+
+Encodes multiple tags, as in the tag block in the header. `tags` must be a dict with string keys of string/None sets.
+
+##### def decode_tags(raw_tags, decode_one=False):
+
+Decodes a string, as in the tag block in the header. Returns a dict of tags (see `encode_tags` for the structure).
+
 ##### def write_tags(file, tags=None, raw_tags=None, unsized=False, minimize=False):
 
 Adds a polytaxis header to opened `file` at the current cursor location (make sure the cursor is at the beginning of the file), with the tags `tags` (or `raw_tags` if you've already encoded your tags).  
 
 If `unsized`, writes the tags in an unsized header.  If not `unsized`, `minimize` will only allocate enough header space for the specified `tags`/`raw_tags`.
 
+`tags` must be in the format described in `encode_tags`.
+
 ##### def get_tags(filename):
 
-Returns a dict (see note above) of tags in `filename` if it has a polytaxis header, otherwise `None`.
+Returns a dict (see `encode_tags`) of tags in `filename` if it has a polytaxis header, otherwise `None`.
 
 ##### def strip_tags(filename):
 
