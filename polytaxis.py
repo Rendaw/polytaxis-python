@@ -342,14 +342,12 @@ def seek_past_tags(file):
 
 class UnwrappedFile(object):
     def __init__(self, filename, mode):
-        if mode in ['a', 'ab']:
+        if mode in ['ab']:
             self.f = open(filename, mode)
             return
-        if mode == 'w':
-            mode = 'r+'
-        elif mode == 'wb':
+        if mode == 'wb':
             mode = 'rb+'
-        elif mode in ('r', 'rb'):
+        elif mode in ('rb'):
             pass
         else:
             raise ValueError('Unsupported mode {}'.format(mode))
