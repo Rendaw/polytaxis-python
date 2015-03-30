@@ -60,6 +60,12 @@ def main():
         action='store_true',
     )
     parser.add_argument(
+        '-z',
+        '--sized',
+        help='Convert to sized header.',
+        action='store_true',
+    )
+    parser.add_argument(
         '-l', 
         '--list', 
         help='List tags after operations.', 
@@ -70,6 +76,17 @@ def main():
     args = parser.parse_args()
     if not args.add and not args.remove and not args.empty and not args.strip:
         args.list = True
+
+    if args.sized and args.unsized:
+        parser.error(
+            'You cannot specify both -z/--sized and -u/--unsized simultaneously.'
+        )
+
+    unsized = None
+    if args.unsized:
+        unsized = True
+    if args.sized:
+        unsized = False
 
     if args.strip and (args.add or args.remove or args.empty or args.list):
         parser.error(
@@ -100,7 +117,7 @@ def main():
                 pass
             modify = True
         if modify:
-            polytaxis.set_tags(filename, tags, unsized=args.unsized)
+            polytaxis.set_tags(filename, tags, unsized=unsized)
         if args.list:
             print('Tags in {}:\n{}'.format(
                 filename,
