@@ -82,7 +82,7 @@ def main():
         if modify:
             polytaxis.set_tags(filename, tags)
         if args.list:
-            print(u'Tags in {}:\n{}'.format(
+            print('Tags in {}:\n{}'.format(
                 filename,
                 polytaxis.encode_tags(tags).decode('utf-8'),
             ))

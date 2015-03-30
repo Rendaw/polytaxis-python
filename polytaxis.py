@@ -2,57 +2,57 @@ import tempfile
 import shutil
 import os
 
-magic = 'polytaxis00'
+magic = b'polytaxis00'
 size_size = 10
 size_limit = 10 ** size_size
-sep = '='
-sep2 = '\n'
-unsized_mark = '<<<<\n'
+sep = b'='
+sep2 = b'\n'
+unsized_mark = b'<<<<\n'
 
 def _encode_part(text):
-    return u''.join({
+    return ''.join({
         '=': '\\=', 
         '\n': '\\\n', 
         '\\': '\\\\',
     }.get(char, char) for char in text).encode('utf-8')
 
 def encode_tag(key, value):
-    key = unicode(key)
-    value = unicode(value) if value is not None else None
+    key = key
+    value = value if value is not None else None
     if value is None:
         return _encode_part(key)
     else:
-        return '{}={}'.format(
+        return b'='.join((
             _encode_part(key),
             _encode_part(value),
-        )
+        ))
 
 def encode_tags(tags):
     assembled = []
     for key, vals in tags.items():
         for val in vals:
             assembled.append(encode_tag(key, val))
-    assembled.append('')
+    assembled.append(b'')
     return sep2.join(assembled)
 
 def decode_tags(raw_tags, decode_one=False):
     tags = {}
 
     class State(object):
-        out_key = []
+        out_key = bytearray()
         out_val = None
         skip = False
         before_split = True
     s = State()
 
     def finish():
-        key = ''.join(s.out_key).decode('utf-8')
+        key = s.out_key.decode('utf-8')
         values = tags.get(key)
         if values is None:
             values = set()
             tags[key] = values
         values.add(
-            ''.join(s.out_val).decode('utf-8') 
+            s.out_val.decode('utf-8') 
             if s.out_val is not None 
             else None
         )
@@ -62,19 +62,19 @@ def decode_tags(raw_tags, decode_one=False):
             s.out_key.append(char)
         else:
             if s.out_val is None:
-                s.out_val = []
+                s.out_val = bytearray()
             s.out_val.append(char)
 
     for char in raw_tags:
         if not s.skip:
-            if char == '\\':
+            if bytes([char]) == b'\\':
                 s.skip = True
-            elif s.before_split and char == '=':
+            elif s.before_split and bytes([char]) == b'=':
                 s.before_split = False
-            elif not decode_one and char == sep2:
+            elif not decode_one and bytes([char]) == sep2:
                 if s.out_key:
                     finish()
-                s.out_key = []
+                s.out_key = bytearray()
                 s.out_val = None
                 s.before_split = True
             else:
@@ -99,17 +99,17 @@ def _read_size(file):
     size_type = file.read(1)
     if len(size_type) != 1:
         raise ValueError(
-            u'Missing size differentiator in file [{}]'.format(
+            'Missing size differentiator in file [{}]'.format(
                 file.name,
             )
         )
-    if size_type == 'u':
+    if size_type == b'u':
         size = -1
     else:
         pre_size = file.read(size_size)
         if len(pre_size) != size_size:
             raise ValueError(
-                u'file [{}] ends before header length could be read'
+                'file [{}] ends before header length could be read'
                 .format(
                     file.name
                 )
@@ -119,7 +119,7 @@ def _read_size(file):
             size = int(pre_size)
         except ValueError as e:
             raise ValueError(
-                u'error reading polytaxis header length in file [{}]: {}'
+                'error reading polytaxis header length in file [{}]: {}'
                 .format(
                     file.name,
                     e,
@@ -127,7 +127,7 @@ def _read_size(file):
             )
     if file.read(1) != sep2:
         raise ValueError(
-            u'file [{}] missing post-size newline'
+            'file [{}] missing post-size newline'
             .format(
                 file.name
             )
@@ -136,9 +136,9 @@ def _read_size(file):
 
 def _find_unsized_mark(file):
     aggregate = []
-    last_buffer = ''
+    last_buffer = b''
     while True:
-        buffer = file.read(1024) or ''
+        buffer = file.read(1024) or b''
         if not buffer:
             return None
         aggregate.append(buffer)
@@ -147,7 +147,7 @@ def _find_unsized_mark(file):
         end = check_buffer.find(unsized_mark)
         if end != -1:
             end_offset = end_offset + end
-            raw_tags = ''.join(aggregate)[:end_offset]
+            raw_tags = b''.join(aggregate)[:end_offset]
             file.seek(file.tell() + end_offset + len(unsized_mark))
             return raw_tags
         last_buffer = buffer
@@ -159,21 +159,21 @@ def write_tags(file, tags=None, raw_tags=None, unsized=False, minimize=False):
     if tags is not None:
         raw_tags = encode_tags(tags)
     if unsized:
-        file.write('u')
+        file.write(b'u')
         file.write(sep2)
         file.write(raw_tags)
         file.write(unsized_mark)
     else:
-        file.write(' ')
+        file.write(b' ')
         new_length = (
             len(raw_tags) if minimize else _shift_bit_length(len(raw_tags))
         )
         new_end = _sized_header_end(new_length)
-        file.write(('{:0' + '{}d'.format(size_size) + '}').format(new_length))
+        file.write(('%0*d' % (size_size, new_length)).encode())
         file.write(sep2)
         file.write(raw_tags)
         if file.tell() < new_end:
-            file.write('\0')
+            file.write(b'\0')
         file.seek(new_end)
 
 def get_tags(filename):
@@ -188,8 +188,8 @@ def get_tags(filename):
             raw_tags = file.read(size)
             if len(raw_tags) != size:
                 raise ValueError(
-                    u'polytaxis header in [{}] should be length {}, '
-                    u'got length {}'
+                    'polytaxis header in [{}] should be length {}, '
+                    'got length {}'
                     .format(
                         filename,
                         size,
@@ -261,7 +261,7 @@ def set_tags(filename, tags, unsized=None, minimize=False):
     raw_tags = encode_tags(tags)
     if len(raw_tags) > size_limit:
         raise ValueError(
-            u'encoded tags (length {}) are too long (max length {})'
+            'encoded tags (length {}) are too long (max length {})'
             .format(
                 len(raw_tags),
                 size_limit,
@@ -317,7 +317,7 @@ def set_tags(filename, tags, unsized=None, minimize=False):
                 return
             file.write(raw_tags)
             if file.tell() < end:
-                file.write('\0')
+                file.write(b'\0')
 
 def seek_tags(file):
     """Seek a file to the start of the tag header."""
