@@ -54,6 +54,12 @@ def main():
         action='store_true',
     )
     parser.add_argument(
+        '-u',
+        '--unsized',
+        help='Add or convert to unsized header.',
+        action='store_true',
+    )
+    parser.add_argument(
         '-l', 
         '--list', 
         help='List tags after operations.', 
@@ -94,7 +100,7 @@ def main():
                 pass
             modify = True
         if modify:
-            polytaxis.set_tags(filename, tags)
+            polytaxis.set_tags(filename, tags, unsized=args.unsized)
         if args.list:
             print('Tags in {}:\n{}'.format(
                 filename,
