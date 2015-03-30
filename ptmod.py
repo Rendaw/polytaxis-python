@@ -2,6 +2,20 @@
 import argparse
 import polytaxis
 
+def minmax_append_action(nmin, nmax):
+    class Inner(argparse.Action):
+        def __call__(self, parser, args, values, option_string=None):
+            if not nmin <= len(values) <= nmax:
+                raise argparse.ArgumentTypeError(
+                    'argument "{argname}" requires between {nmin} and {nmax} arguments'.format(
+                        argname=self.dest,
+                        nmin=nmin,
+                        nmax=nmax,
+                    )
+                )
+            getattr(args, self.dest).append(values)
+    return Inner
+
 def main():
     """List and modify tags."""
     parser = argparse.ArgumentParser(
@@ -13,30 +27,30 @@ def main():
         nargs='*', 
     )
     parser.add_argument(
-        '-c', 
-        '--clear', 
-        help='Clear tags. Applied first.',
-        nargs='*', 
+        '-e', 
+        '--empty', 
+        help='Create an empty header. Applied first.',
+        action='store_true',
     )
     parser.add_argument(
         '-a', 
         '--add', 
         help='Add tag.',
-        nargs=2, 
-        action='append',
+        nargs='+',
+        action=minmax_append_action(1, 2),
     )
     parser.add_argument(
         '-r', 
         '--remove', 
         help='Remove tag.',
-        nargs=2, 
-        action='append',
+        nargs='+',
+        action=minmax_append_action(1, 2),
         default=[],
     )
     parser.add_argument(
         '-s',
         '--strip',
-        help='Remove polytaxis header.',
+        help='Strip polytaxis header.',
         action='store_true',
     )
     parser.add_argument(
@@ -48,10 +62,10 @@ def main():
     )
     parser.set_defaults(list=False, strip=False, add=[], remove=[])
     args = parser.parse_args()
-    if not args.add and not args.remove and not args.clear and not args.strip:
+    if not args.add and not args.remove and not args.empty and not args.strip:
         args.list = True
 
-    if args.strip and (args.add or args.remove or args.clear or args.list):
+    if args.strip and (args.add or args.remove or args.empty or args.list):
         parser.error(
             'You cannot use any other options with -s/--strip.'
         )
@@ -63,7 +77,7 @@ def main():
 
         tags = polytaxis.get_tags(filename) or {}
         modify = False
-        if args.clear:
+        if args.empty:
             tags = {}
             modify = True
         for key, val in args.add:
