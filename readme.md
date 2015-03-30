@@ -2,9 +2,11 @@
 
 `polytaxis-python` is a reference python library for interacting with files with a polytaxis header.  It also provides the command line utility `ptmod` for manipulate polytaxis headers.
 
+Requires Python 3.
+
 # Installation
 
-Run `pip2 install git+https://github.com/Rendaw/polytaxis-python`.
+Run `pip install git+https://github.com/Rendaw/polytaxis-python`.
 
 # Usage
 
