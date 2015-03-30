@@ -347,4 +347,4 @@ class TestPolytaxisFilesInternal(unittest.TestCase):
 class TestRealLife(unittest.TestCase):
     def test_broken1(self):
         with open(res('broken1.txt.p'), 'rb') as file:
-            polytaxis.seek_past_tags(file)
+            self.assertTrue(polytaxis.seek_past_tags(file))

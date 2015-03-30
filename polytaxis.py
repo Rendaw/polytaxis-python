@@ -142,8 +142,8 @@ def _find_unsized_mark(file):
         if not buffer:
             return None
         aggregate.append(buffer)
-        end_offset = -(min(len(unsized_mark), len(last_buffer)) + len(buffer))
-        check_buffer = last_buffer[-len(unsized_mark):] + buffer
+        check_buffer = last_buffer + buffer
+        end_offset = -len(check_buffer)
         end = check_buffer.find(unsized_mark)
         if end != -1:
             end_offset = end_offset + end
@@ -184,6 +184,12 @@ def get_tags(filename):
         size = _read_size(file)
         if size == -1:
             raw_tags = _find_unsized_mark(file)
+            if raw_tags is None:
+                raise ValueError(
+                    'Could not find end of tags in [{}]'.format(
+                        filename
+                    )
+                )
         else:
             raw_tags = file.read(size)
             if len(raw_tags) != size:
@@ -280,7 +286,7 @@ def set_tags(filename, tags, unsized=None, minimize=False):
             return
         size = _read_size(file)
         if size == -1:
-            if not _find_unsized_mark(file):
+            if _find_unsized_mark(file) is None:
                 raise ValueError(
                     'Could not find end of tags in [{}]'.format(
                         filename
@@ -331,7 +337,7 @@ def seek_past_tags(file):
         return False
     size = _read_size(file)
     if size == -1:
-        if not _find_unsized_mark(file):
+        if _find_unsized_mark(file) is None:
             return False
     else:
         total = _sized_header_end(size)
