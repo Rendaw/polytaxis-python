@@ -67,6 +67,13 @@ class TestPolytaxis(unittest.TestCase):
         end['b'] = sorted(list(end['b']))
         self.assertEqual(begin, end)
 
+    def test_encode_decode_one(self):
+        begin = ('a', 'b')
+        temp = polytaxis.encode_tag(*begin)
+        self.assertEqual(temp, b'a=b')
+        end = polytaxis.decode_tag(temp)
+        self.assertEqual(begin, end)
+
     def test_write_unsized_empty(self):
         with io.BytesIO() as file:
             polytaxis.write_tags(file, unsized=True, minimize=True, tags={})

@@ -83,7 +83,14 @@ def decode_tags(raw_tags, decode_one=False):
             append(char)
             s.skip = False
 
+    if decode_one and s.out_key:
+        finish()
+
     return tags
+
+def decode_tag(raw_tag):
+    key, values = next(iter(decode_tags(raw_tag, True).items()), None)
+    return (key, next(iter(values)))
 
 def _sized_header_end(size):
     return len(magic) + 1 + size_size + 1 + size
