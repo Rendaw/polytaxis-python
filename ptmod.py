@@ -35,17 +35,18 @@ def main():
     parser.add_argument(
         '-a', 
         '--add', 
-        help='Add tag.',
-        nargs='+',
-        action=minmax_append_action(1, 2),
+        help='Add tag.'
+        ' May be specified multiple times.'
+        ' Tags must be specified in \'tagname\' or \'tagname=val\' form.',
+        action='append',
     )
     parser.add_argument(
         '-r', 
         '--remove', 
-        help='Remove tag.',
-        nargs='+',
-        action=minmax_append_action(1, 2),
-        default=[],
+        help='Remove tag.'
+        ' May be specified multiple times.'
+        ' Tags must be specified in \'tagname\' or \'tagname=val\' form.',
+        action='append',
     )
     parser.add_argument(
         '-s',
@@ -107,12 +108,14 @@ def main():
         if args.empty:
             tags = {}
             modify = True
-        for key, val in args.add:
+        for keyval in args.add:
+            key, val = polytaxis.decode_tag(keyval.encode('utf-8'))
             if not key in tags:
                 tags[key] = set()
             tags[key].add(val)
             modify = True
-        for key, val in args.remove:
+        for keyval in args.remove:
+            key, val = polytaxis.decode_tag(keyval.encode('utf-8'))
             if not key in tags:
                 continue
             try:
