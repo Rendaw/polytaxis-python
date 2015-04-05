@@ -181,7 +181,9 @@ def write_tags(file, tags=None, raw_tags=None, unsized=False, minimize=False):
         file.write(raw_tags)
         if file.tell() < new_end:
             file.write(b'\0')
-        file.seek(new_end)
+        if file.tell() < new_end:
+            file.seek(new_end - 1)
+            file.write(b'\n')
 
 def get_tags(filename):
     """Gets tags from a file with a tag header, or returns None."""
