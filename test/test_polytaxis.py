@@ -7,7 +7,7 @@ import polytaxis
 
 normal_tags = {'a': set(['a'])}
 
-raw_unsized_empty = (
+raw_unsized_notags = (
     b'polytaxis00u\n'
     b'<<<<\n'
     b'wug'
@@ -20,14 +20,29 @@ raw_unsized_normal = (
     b'wug'
 )
 
-raw_sized_empty = (
+raw_sized_minimized_notags = (
     b'polytaxis00 0000000000\n'
     b'wug'
 )
-     
-raw_sized_normal = (
+
+raw_sized_notags = (
+    b'polytaxis00 0000000512\n' +
+    b''.join(b'\0' for x in range(511)) +
+    b'\n'
+    b'wug'
+)
+
+raw_sized_minimized_normal = (
     b'polytaxis00 0000000004\n'
     b'a=a\n'
+    b'wug'
+)
+
+raw_sized_normal = (
+    b'polytaxis00 0000000512\n'
+    b'a=a\n' +
+    b''.join(b'\0' for x in range(507)) +
+    b'\n'
     b'wug'
 )
 
@@ -74,12 +89,12 @@ class TestPolytaxis(unittest.TestCase):
         end = polytaxis.decode_tag(temp)
         self.assertEqual(begin, end)
 
-    def test_write_unsized_empty(self):
+    def test_write_unsized_notags(self):
         with io.BytesIO() as file:
             polytaxis.write_tags(file, unsized=True, minimize=True, tags={})
             file.write(b'wug')
             file.seek(0)
-            self.assertEqual(file.read(), raw_unsized_empty)
+            self.assertEqual(file.read(), raw_unsized_notags)
 
     def test_write_unsized_normal(self):
         with io.BytesIO() as file:
@@ -93,7 +108,7 @@ class TestPolytaxis(unittest.TestCase):
             file.seek(0)
             self.assertEqual(file.read(), raw_unsized_normal)
     
-    def test_write_sized_empty(self):
+    def test_write_sized_minimized_notags(self):
         with io.BytesIO() as file:
             polytaxis.write_tags(
                 file, 
@@ -102,9 +117,20 @@ class TestPolytaxis(unittest.TestCase):
             )
             file.write(b'wug')
             file.seek(0)
-            self.assertEqual(file.read(), raw_sized_empty)
+            self.assertEqual(file.read(), raw_sized_minimized_notags)
+    
+    def test_write_sized_notags(self):
+        with io.BytesIO() as file:
+            polytaxis.write_tags(
+                file, 
+                minimize=False,
+                tags={}
+            )
+            file.write(b'wug')
+            file.seek(0)
+            self.assertEqual(file.read(), raw_sized_notags)
 
-    def test_write_sized_normal(self):
+    def test_write_sized_minimized_normal(self):
         with io.BytesIO() as file:
             polytaxis.write_tags(
                 file, 
@@ -113,17 +139,27 @@ class TestPolytaxis(unittest.TestCase):
             )
             file.write(b'wug')
             file.seek(0)
+            self.assertEqual(file.read(), raw_sized_minimized_normal)
+    
+    def test_write_sized_normal(self):
+        with io.BytesIO() as file:
+            polytaxis.write_tags(
+                file, 
+                tags=normal_tags,
+            )
+            file.write(b'wug')
+            file.seek(0)
             self.assertEqual(file.read(), raw_sized_normal)
-
+    
     def test_get_missing(self):
         self.assertEqual(
             polytaxis.get_tags(res('missing.txt')),
             None,
         )
 
-    def test_get_unsized_empty(self):
+    def test_get_unsized_notags(self):
         self.assertEqual(
-            polytaxis.get_tags(res('unsized-empty.txt')),
+            polytaxis.get_tags(res('unsized-notags-1.txt')),
             {},
         )
 
@@ -133,15 +169,27 @@ class TestPolytaxis(unittest.TestCase):
             {'a': set(['a'])},
         )
 
-    def test_get_sized_empty(self):
+    def test_get_sized_minimized_notags(self):
         self.assertEqual(
-            polytaxis.get_tags(res('sized-empty.txt')),
+            polytaxis.get_tags(res('sized-notags-1.txt')),
             {},
         )
+    
+    def test_get_sized_nobody(self):
+        self.assertEqual(
+            polytaxis.get_tags(res('sized-nobody-1.txt')),
+            {'a': set(['a'])},
+        )
 
-    def test_get_sized_normal(self):
+    def test_get_sized_minimized_normal(self):
         self.assertEqual(
             polytaxis.get_tags(res('sized-1.txt')),
+            {'a': set(['a'])},
+        )
+    
+    def test_get_sized_normal(self):
+        self.assertEqual(
+            polytaxis.get_tags(res('sized-2.txt')),
             {'a': set(['a'])},
         )
     
@@ -150,8 +198,8 @@ class TestPolytaxis(unittest.TestCase):
             polytaxis.seek_past_tags(file)
             self.assertEqual(file.read(), b'wug')
 
-    def test_seek_unsized_empty(self):
-        with open(res('unsized-empty.txt'), 'rb') as file:
+    def test_seek_unsized_minimized_notags(self):
+        with open(res('unsized-notags-1.txt'), 'rb') as file:
             polytaxis.seek_past_tags(file)
             self.assertEqual(file.read(), b'wug')
 
@@ -160,13 +208,18 @@ class TestPolytaxis(unittest.TestCase):
             polytaxis.seek_past_tags(file)
             self.assertEqual(file.read(), b'wug')
 
-    def test_seek_sized_empty(self):
-        with open(res('sized-empty.txt'), 'rb') as file:
+    def test_seek_sized_minimized_notags(self):
+        with open(res('sized-notags-1.txt'), 'rb') as file:
             polytaxis.seek_past_tags(file)
             self.assertEqual(file.read(), b'wug')
-
-    def test_seek_sized_normal(self):
+    
+    def test_seek_sized_minimized_normal(self):
         with open(res('sized-1.txt'), 'rb') as file:
+            polytaxis.seek_past_tags(file)
+            self.assertEqual(file.read(), b'wug')
+    
+    def test_seek_sized_normal(self):
+        with open(res('sized-2.txt'), 'rb') as file:
             polytaxis.seek_past_tags(file)
             self.assertEqual(file.read(), b'wug')
 
@@ -221,7 +274,7 @@ class TestPolytaxisFiles(unittest.TestCase):
         )
         self.assertEqual(
             open2r(res('seed.txt.p')),
-            raw_sized_normal,
+            raw_sized_minimized_normal,
         )
 
     def test_set_sized_existing(self):
@@ -238,7 +291,7 @@ class TestPolytaxisFiles(unittest.TestCase):
         )
         self.assertEqual(
             open2r(res('seed.txt.p')), 
-            raw_sized_normal,
+            raw_sized_minimized_normal,
         )
 
     def test_convert_unsized_to_sized(self):
@@ -256,7 +309,7 @@ class TestPolytaxisFiles(unittest.TestCase):
         )
         self.assertEqual(
             open2r(res('seed.txt.p')), 
-            raw_sized_normal,
+            raw_sized_minimized_normal,
         )
 
     def test_convert_sized_to_unsized(self):
@@ -348,7 +401,7 @@ class TestPolytaxisFilesInternal(unittest.TestCase):
         )
         self.assertEqual(
             open2r(res('seed.txt.p')),
-            raw_sized_normal,
+            raw_sized_minimized_normal,
         )
 
 class TestRealLife(unittest.TestCase):

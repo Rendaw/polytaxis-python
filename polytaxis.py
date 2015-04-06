@@ -69,6 +69,8 @@ def decode_tags(raw_tags, decode_one=False):
         if not s.skip:
             if bytes([char]) == b'\\':
                 s.skip = True
+            elif bytes([char]) == b'\x00':
+                break
             elif s.before_split and bytes([char]) == b'=':
                 s.before_split = False
             elif not decode_one and bytes([char]) == sep2:
