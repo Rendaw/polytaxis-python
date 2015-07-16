@@ -61,3 +61,19 @@ Seeks `file` to the beginning of the polytaxis header.
 ##### def seek_past_tags(file, filename='unknown'):
 
 Seeks `file` to the end of the polytaxis header.
+
+# Templates
+
+[A template script to modify file tags](modify-template.py)
+
+# Support
+
+Ask questions and raise issues on the GitHub issue tracker.
+
+See Contributing below for information about prioritizing issues.
+
+# Contributing
+
+1. Develop and submit pull requests.
+
+2. Fund development via https://www.bountysource.com/

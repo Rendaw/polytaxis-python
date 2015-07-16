@@ -286,15 +286,17 @@ def set_tags(filename, tags, unsized=None, minimize=False):
         )
     with open(filename, 'r+b') as file:
         if not _read_magic(file):
+            old_filename = filename
+            filename = '{}.p'.format(filename)
             _insert_tags(
                 raw_tags, 
                 file, 
-                '{}.p'.format(filename), 
+                filename, 
                 unsized=unsized if unsized is not None else False,
                 minimize=minimize,
             )
-            os.remove(filename)
-            return
+            os.remove(old_filename)
+            return filename
         size = _read_size(file)
         if size == -1:
             if _find_unsized_mark(file) is None:
@@ -321,7 +323,7 @@ def set_tags(filename, tags, unsized=None, minimize=False):
                     unsized=unsized if unsized is not None else False,
                     minimize=minimize,
                 )
-                return
+                return filename
             if unsized == True:
                 file.seek(end)
                 _insert_tags(
@@ -331,10 +333,11 @@ def set_tags(filename, tags, unsized=None, minimize=False):
                     unsized=True,
                     minimize=minimize,
                 )
-                return
+                return filename
             file.write(raw_tags)
             if file.tell() < end:
                 file.write(b'\0')
+    return filename
 
 def seek_tags(file):
     """Seek a file to the start of the tag header."""
